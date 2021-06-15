@@ -1,3 +1,4 @@
+import datetime
 import re
 import socket
 import json
@@ -190,15 +191,15 @@ class FastHttpSession:
                 headers["Accept"] = "application/json"
 
         if not allow_redirects:
-            old_redirect_response_codes = self.client.redirect_resonse_codes
-            self.client.redirect_resonse_codes = []
+            old_redirect_response_codes = self.client.redirect_response_codes
+            self.client.redirect_response_codes = []
 
         # send request, and catch any exceptions
         response = self._send_request_safe_mode(method, url, payload=data, headers=headers, **kwargs)
         request_meta["response"] = response
 
         if not allow_redirects:
-            self.client.redirect_resonse_codes = old_redirect_response_codes
+            self.client.redirect_response_codes = old_redirect_response_codes
 
         # get the length of the content, but if the argument stream is set to True, we take
         # the size from the content-length header, in order to not trigger fetching of the body
@@ -209,6 +210,7 @@ class FastHttpSession:
                 request_meta["response_length"] = len(response.content or "")
             except HTTPParseError as e:
                 request_meta["response_time"] = (time.perf_counter() - start_time) * 1000
+                response.elapsed = datetime.timedelta(microseconds=request_meta["response_time"])
                 request_meta["response_length"] = 0
                 request_meta["exception"] = e
                 self.environment.events.request.fire(**request_meta)
@@ -218,6 +220,7 @@ class FastHttpSession:
         # Note: This is intentionally placed after we record the content_size above, since
         # we'll then trigger fetching of the body (unless stream=True)
         request_meta["response_time"] = int((time.perf_counter() - start_time) * 1000)
+        response.elapsed = datetime.timedelta(microseconds=request_meta["response_time"])
 
         if catch_response:
             return ResponseContextManager(response, environment=self.environment, request_meta=request_meta)
@@ -328,6 +331,10 @@ class FastResponse(CompatResponse):
     encoding: str = None
     """In some cases setting the encoding explicitly is needed. If so, do it before calling .text"""
 
+    def __init__(self, *args, **kwargs):
+        self.elapsed: datetime.timedelta = datetime.timedelta(0)
+        super().__init__(*args, **kwargs)
+
     @property
     def text(self) -> str:
         """
@@ -365,6 +372,10 @@ class FastResponse(CompatResponse):
         if self.headers is None:
             return None
         return super()._content()
+
+    @property
+    def request(self):
+        return self._request
 
 
 class ErrorResponse:
