@@ -65,11 +65,13 @@ def insecure_ssl_context_factory():
 class FastHttpSession:
     auth_header = None
 
-    def __init__(self, environment: Environment, base_url: str, user: "FastHttpUser", insecure=True, **kwargs):
+    def __init__(self, environment: Environment, base_url: str, user: "FastHttpUser", insecure=True,
+                 make_name_callback=None, **kwargs):
         self.environment = environment
         self.base_url = base_url
         self.cookiejar = CookieJar()
         self.user = user
+        self.make_name_callback = make_name_callback
         if insecure:
             ssl_context_factory = insecure_ssl_context_factory
         else:
@@ -166,6 +168,10 @@ class FastHttpSession:
 
         if self.user:
             context = {**self.user.context(), **context}
+
+        if not name and self.make_name_callback:
+            name = self.make_name_callback(path)
+            pass
 
         # store meta data that is used when reporting the request to locust's statistics
         request_meta = {
@@ -298,6 +304,11 @@ class FastHttpUser(User):
     insecure: bool = True
     """Parameter passed to FastHttpSession. Default True, meaning no SSL verification."""
 
+    @staticmethod
+    def make_name_callback(path):
+        return None
+    """Parameter passed to FastHttpSession. Adds ability to create custom name based on url path."""
+
     abstract = True
     """Dont register this as a User class that can be run by itself"""
 
@@ -319,6 +330,7 @@ class FastHttpUser(User):
             max_retries=self.max_retries,
             insecure=self.insecure,
             user=self,
+            make_name_callback=self.make_name_callback,
         )
 
 
