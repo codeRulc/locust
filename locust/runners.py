@@ -40,7 +40,7 @@ CPU_MONITOR_INTERVAL = 5.0
 HEARTBEAT_INTERVAL = 1
 HEARTBEAT_LIVENESS = 3
 FALLBACK_INTERVAL = 5
-
+MAX_ALLOWED_HEARTBEAT_INTERVAL_MISSES = 100
 
 greenlet_exception_handler = greenlet_exception_logger(logger)
 
@@ -613,6 +613,7 @@ class MasterRunner(DistributedRunner):
             self.update_state(STATE_STOPPED)
 
     def heartbeat_worker(self):
+        heartbeat_interval_misses = 0
         while True:
             gevent.sleep(HEARTBEAT_INTERVAL)
             if self.connection_broken:
@@ -625,6 +626,12 @@ class MasterRunner(DistributedRunner):
                     client.state = STATE_MISSING
                     client.user_count = 0
                     if self.worker_count <= 0:
+                        heartbeat_interval_misses += 1
+                        if heartbeat_interval_misses < MAX_ALLOWED_HEARTBEAT_INTERVAL_MISSES:
+                            left_retries = MAX_ALLOWED_HEARTBEAT_INTERVAL_MISSES - heartbeat_interval_misses
+                            logger.info(f"The last worker went missing, waiting {left_retries} more heartbeats.")
+                            continue
+
                         logger.info("The last worker went missing, stopping test.")
                         self.stop()
                         self.check_stopped()
