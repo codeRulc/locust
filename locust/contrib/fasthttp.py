@@ -170,7 +170,7 @@ class FastHttpSession:
             context = {**self.user.context(), **context}
 
         if not name and self.make_name_callback:
-            name = self.make_name_callback(path)
+            name = self.make_name_callback(path, data, **kwargs)
             pass
 
         # store meta data that is used when reporting the request to locust's statistics
@@ -305,8 +305,8 @@ class FastHttpUser(User):
     """Parameter passed to FastHttpSession. Default True, meaning no SSL verification."""
 
     @staticmethod
-    def make_name_callback(path):
-        return None
+    def make_name_callback(path, data, **kwargs):
+        pass
     """Parameter passed to FastHttpSession. Adds ability to create custom name based on url path."""
 
     abstract = True
