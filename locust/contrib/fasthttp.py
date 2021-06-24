@@ -116,6 +116,13 @@ class FastHttpSession:
                 r = e.response
             else:
                 r = ErrorResponse()
+            if not hasattr(r, 'request'):
+                class DummyRequest:
+                    pass
+                r.request = DummyRequest()
+            r.request.url = url
+            r.request.method = method
+            r.request.headers = kwargs.get('headers', dict())
             r.error = e
             return r
 
