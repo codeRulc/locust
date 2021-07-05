@@ -223,7 +223,7 @@ class FastHttpSession:
                 request_meta["response_length"] = len(response.content or "")
             except HTTPParseError as e:
                 request_meta["response_time"] = (time.perf_counter() - start_time) * 1000
-                response.elapsed = datetime.timedelta(microseconds=request_meta["response_time"])
+                response.elapsed = datetime.timedelta(milliseconds=request_meta["response_time"])
                 request_meta["response_length"] = 0
                 request_meta["exception"] = e
                 self.environment.events.request.fire(**request_meta)
@@ -233,7 +233,7 @@ class FastHttpSession:
         # Note: This is intentionally placed after we record the content_size above, since
         # we'll then trigger fetching of the body (unless stream=True)
         request_meta["response_time"] = int((time.perf_counter() - start_time) * 1000)
-        response.elapsed = datetime.timedelta(microseconds=request_meta["response_time"])
+        response.elapsed = datetime.timedelta(milliseconds=request_meta["response_time"])
 
         if catch_response:
             return ResponseContextManager(response, environment=self.environment, request_meta=request_meta)
